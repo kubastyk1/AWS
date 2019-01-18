@@ -25,6 +25,8 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.SdkClientException;
 
@@ -73,7 +75,13 @@ public class SQSSimpleJavaClientExample {
 		 * region) set automatically. For more information, see Creating Service Clients
 		 * in the AWS SDK for Java Developer Guide.
 		 */
-		final AmazonSQS sqs = AmazonSQSClientBuilder.defaultClient();
+		BasicAWSCredentials creds = new BasicAWSCredentials("access_key", "secret_key");
+		
+		final AmazonSQS sqs = AmazonSQSClientBuilder.standard()
+			.withRegion("eu-central-1")
+			.withCredentials(new AWSStaticCredentialsProvider(creds))
+			.build();
+				
 
 		System.out.println("===============================================");
 		System.out.println("Getting Started with Amazon SQS Standard Queues");

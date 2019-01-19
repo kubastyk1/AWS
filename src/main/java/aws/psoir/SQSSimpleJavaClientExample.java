@@ -41,6 +41,8 @@ import java.awt.geom.AffineTransform;
 import java.awt.image.AffineTransformOp;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -68,6 +70,8 @@ import com.amazonaws.services.s3.model.S3Object;
 public class SQSSimpleJavaClientExample {
 	
 	private static BufferedImage picture;
+	static BasicAWSCredentials creds = new BasicAWSCredentials("id", "security_id");
+
 	
 	public static void main(String[] args) {
 		/*
@@ -75,7 +79,6 @@ public class SQSSimpleJavaClientExample {
 		 * region) set automatically. For more information, see Creating Service Clients
 		 * in the AWS SDK for Java Developer Guide.
 		 */
-		BasicAWSCredentials creds = new BasicAWSCredentials("access_key", "secret_key");
 		
 		final AmazonSQS sqs = AmazonSQSClientBuilder.standard()
 			.withRegion("eu-central-1")
@@ -101,11 +104,13 @@ public class SQSSimpleJavaClientExample {
 			}
 			System.out.println();
 			
+			String pictureName = "";
+			
 			for (String myQueueUrl : queueList) {
 
 				// Send a message.
-				System.out.println("Sending a message to MyQueue.\n");
-				sqs.sendMessage(new SendMessageRequest(myQueueUrl, "This is my message text."));
+			/*	System.out.println("Sending a message to MyQueue.\n");
+				sqs.sendMessage(new SendMessageRequest(myQueueUrl, "This is my message text."));*/
 	
 				// Receive messages.
 				System.out.println("Receiving messages from MyQueue.\n");
@@ -117,29 +122,36 @@ public class SQSSimpleJavaClientExample {
 					System.out.println("  ReceiptHandle: " + message.getReceiptHandle());
 					System.out.println("  MD5OfBody:     " + message.getMD5OfBody());
 					System.out.println("  Body:          " + message.getBody());
+					pictureName = message.getBody();
 					for (final Entry<String, String> entry : message.getAttributes().entrySet()) {
 						System.out.println("Attribute");
 						System.out.println("  Name:  " + entry.getKey());
 						System.out.println("  Value: " + entry.getValue());
-						
-						getObject(entry.getValue());
-						uploadFile(entry.getValue());
-						
 					}
 				}
 				System.out.println();
 				
-				
+				if (pictureName != "") {
+					getObject(pictureName);
+			/*		try {
+						ImageIO.write(picture, "png", new File("old.png"));
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					} */
+					uploadFile(pictureName);					
+				}
+
 				
 	
 				// Delete the message.
-				System.out.println("Deleting a message.\n");
-				final String messageReceiptHandle = messages.get(0).getReceiptHandle();
-				sqs.deleteMessage(new DeleteMessageRequest(myQueueUrl, messageReceiptHandle));
+//				System.out.println("Deleting a message.\n");
+//				final String messageReceiptHandle = messages.get(0).getReceiptHandle();
+//				sqs.deleteMessage(new DeleteMessageRequest(myQueueUrl, messageReceiptHandle));
 	
 				// Delete the queue.
-				System.out.println("Deleting the test queue.\n");
-				sqs.deleteQueue(new DeleteQueueRequest(myQueueUrl));
+//				System.out.println("Deleting the test queue.\n");
+//				sqs.deleteQueue(new DeleteQueueRequest(myQueueUrl));
 			}
 		} catch (final AmazonServiceException ase) {
 			System.out.println(
@@ -158,30 +170,54 @@ public class SQSSimpleJavaClientExample {
 		}
 	}
 	
-	public static void uploadFile(String attribute) {
+	public static void uploadFile(String pictureName) {
 		String clientRegion = "eu-central-1";
         String bucketName = "psoir-bucket";
      //   String stringObjKeyName =  objectKey;
-        String fileObjKeyName = "key";
-        String fileName = Integer.toString(new Random().nextInt(10000));
+   //     String fileObjKeyName = "key";
+   //     String fileName = Integer.toString(new Random().nextInt(10000));
+        
+        String fileObjKeyName = "modified_pic/" + pictureName;
+        String fileName = "modified_pic/" + pictureName;
 
         try {
+			System.out.println("A");
+
+
             AmazonS3 s3Client = AmazonS3ClientBuilder.standard()
                     .withRegion(clientRegion)
-                    .withCredentials(new ProfileCredentialsProvider())
+                    .withCredentials(new AWSStaticCredentialsProvider(creds))
                     .build();
         /*
             // Upload a text string as a new object.
             s3Client.putObject(bucketName, stringObjKeyName, "Uploaded String Object");
        */     
-            
+			System.out.println("B");
+			
+		/*	ByteArrayOutputStream os = new ByteArrayOutputStream();
+			ImageIO.write(picture, "jpeg", os);
+			InputStream is = new ByteArrayInputStream(os.toByteArray());
+
+			ObjectMetadata metadata = new ObjectMetadata();
+			PutObjectRequest request = new PutObjectRequest(bucketName, fileObjKeyName, is, metadata);*/
+			
+			File file = new File("picture.png");
+			ImageIO.write(picture, "jpeg", file);
+            PutObjectRequest request = new PutObjectRequest(bucketName, fileObjKeyName, file);			
+            file.delete();
+			
+
             // Upload a file as a new object with ContentType and title specified.
-            PutObjectRequest request = new PutObjectRequest(bucketName, fileObjKeyName, new File(fileName));
+      //      PutObjectRequest request = new PutObjectRequest(bucketName, fileObjKeyName, new File(fileName));
           /*  ObjectMetadata metadata = new ObjectMetadata();
             metadata.setContentType("plain/text");
             metadata.addUserMetadata("x-amz-meta-title", "someTitle");
             request.setMetadata(metadata);*/
+			System.out.println("C");
+
             s3Client.putObject(request);
+			System.out.println("D");
+
         }
         catch(AmazonServiceException e) {
             // The call was transmitted successfully, but Amazon S3 couldn't process 
@@ -192,19 +228,22 @@ public class SQSSimpleJavaClientExample {
             // Amazon S3 couldn't be contacted for a response, or the client
             // couldn't parse the response from Amazon S3.
             e.printStackTrace();
-        }
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 	
-	public static void getObject(String objectKey) {
+	public static void getObject(String pictureName) {
         String clientRegion = "eu-central-1";
         String bucketName = "psoir-bucket";
-        String key = objectKey;
+        String key = "pic/" + pictureName;
 
         S3Object fullObject = null, objectPortion = null, headerOverrideObject = null;
         try {
             AmazonS3 s3Client = AmazonS3ClientBuilder.standard()
                     .withRegion(clientRegion)
-                    .withCredentials(new ProfileCredentialsProvider())
+        			.withCredentials(new AWSStaticCredentialsProvider(creds))
                     .build();
 
             // Get an object and print its contents.
@@ -294,4 +333,4 @@ public class SQSSimpleJavaClientExample {
 	public void transformTheImage() {
 		
 	}
-}
+}//https://175745531068.signin.aws.amazon.com/console

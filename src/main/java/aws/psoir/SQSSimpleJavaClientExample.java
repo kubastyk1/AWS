@@ -30,7 +30,6 @@ import com.amazonaws.SdkClientException;
 
 import java.io.File;
 import java.util.List;
-import java.util.Map.Entry;
 
 import javax.imageio.ImageIO;
 
@@ -56,7 +55,7 @@ import com.amazonaws.services.s3.model.S3Object;
 public class SQSSimpleJavaClientExample {
 	
 	private static BufferedImage picture;
-	private static BasicAWSCredentials creds = new BasicAWSCredentials("id", "security_id");
+	private static BasicAWSCredentials creds = new BasicAWSCredentials("key", "security_key");
 	
 	
 	public static void main(String[] args) {
@@ -77,19 +76,13 @@ public class SQSSimpleJavaClientExample {
 		System.out.println("===============================================\n");
 
 		try {
-			String pictureName = "";
-
-			List<String> queueList = sqs.listQueues().getQueueUrls();
-			// List all queues.
-			System.out.println("Listing all queues in your account.\n");
-			for (final String queueUrl : sqs.listQueues().getQueueUrls()) {
-				System.out.println("  QueueUrl: " + queueUrl);
-			}
-			System.out.println();
-			
-			
-			for (String myQueueUrl : queueList) {
+			while(true) {
+				Thread.sleep(5000);		
+				String pictureName = "";
 	
+				List<String> queueList = sqs.listQueues().getQueueUrls();				
+				String myQueueUrl = queueList.get(0);
+				
 				// Receive messages.
 				System.out.println("Receiving messages from MyQueue.\n");
 				final ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest(myQueueUrl);
@@ -100,26 +93,20 @@ public class SQSSimpleJavaClientExample {
 					System.out.println("  ReceiptHandle: " + message.getReceiptHandle());
 					System.out.println("  MD5OfBody:     " + message.getMD5OfBody());
 					System.out.println("  Body:          " + message.getBody());
+					
+					
 					pictureName = message.getBody();
-					for (final Entry<String, String> entry : message.getAttributes().entrySet()) {
-						System.out.println("Attribute");
-						System.out.println("  Name:  " + entry.getKey());
-						System.out.println("  Value: " + entry.getValue());
+								
+					if (pictureName != "") {
+						getObject(pictureName);
+						uploadFile(pictureName);					
 					}
-				}
-				System.out.println();
-				
-				if (pictureName != "") {
-					getObject(pictureName);
-					uploadFile(pictureName);					
-				}
-
-				
 	
-				// Delete the message.
-//				System.out.println("Deleting a message.\n");
-//				final String messageReceiptHandle = messages.get(0).getReceiptHandle();
-//				sqs.deleteMessage(new DeleteMessageRequest(myQueueUrl, messageReceiptHandle));
+					// Delete the message.
+					System.out.println("Deleting a message.\n");
+					final String messageReceiptHandle = messages.get(0).getReceiptHandle();
+					sqs.deleteMessage(new DeleteMessageRequest(myQueueUrl, messageReceiptHandle));
+				}
 			}
 		} catch (final AmazonServiceException ase) {
 			System.out.println(
@@ -135,6 +122,8 @@ public class SQSSimpleJavaClientExample {
 					+ "the client encountered a serious internal problem while "
 					+ "trying to communicate with Amazon SQS, such as not " + "being able to access the network.");
 			System.out.println("Error Message: " + ace.getMessage());
+		} catch (InterruptedException e) {
+			e.printStackTrace();
 		}
 	}
 	
@@ -143,6 +132,8 @@ public class SQSSimpleJavaClientExample {
         String bucketName = "psoir-bucket";
         String fileObjKeyName = "modified_pic/" + pictureName;
         String fileName = "modified_pic/" + pictureName;
+        
+		File file = new File("picture.jpeg");
 
         try {
             AmazonS3 s3Client = AmazonS3ClientBuilder.standard()
@@ -157,10 +148,9 @@ public class SQSSimpleJavaClientExample {
 			ObjectMetadata metadata = new ObjectMetadata();
 			PutObjectRequest request = new PutObjectRequest(bucketName, fileObjKeyName, is, metadata);*/
 			
-			File file = new File("picture.png");
+		//	File file = new File("picture.jpeg");
 			ImageIO.write(picture, "jpeg", file);
             PutObjectRequest request = new PutObjectRequest(bucketName, fileObjKeyName, file);			
-            file.delete();
             
             s3Client.putObject(request);
 			System.out.println("File was uploaded to S3");
@@ -171,8 +161,12 @@ public class SQSSimpleJavaClientExample {
         }
         catch(SdkClientException e) {
             e.printStackTrace();
-		} catch (IOException e) {
+		} 
+        catch (IOException e) {
 			e.printStackTrace();
+		} 
+        finally {
+           file.delete();
 		}
 	}
 	
@@ -217,4 +211,4 @@ public class SQSSimpleJavaClientExample {
 		return myPicture;
 	}
 
-}//https://175745531068.signin.aws.amazon.com/console
+}//https://175745531068.signin.aws.amazon.com/console-

@@ -55,7 +55,7 @@ import com.amazonaws.services.s3.model.S3Object;
 public class SQSSimpleJavaClientExample {
 	
 	private static BufferedImage picture;
-	private static BasicAWSCredentials creds = new BasicAWSCredentials("key", "security_key");
+	private static BasicAWSCredentials creds = new BasicAWSCredentials("key", "security-key");
 	
 	
 	public static void main(String[] args) {
@@ -70,22 +70,29 @@ public class SQSSimpleJavaClientExample {
 			.withCredentials(new AWSStaticCredentialsProvider(creds))
 			.build();
 				
-
 		System.out.println("===============================================");
 		System.out.println("Getting Started with Amazon SQS Standard Queues");
 		System.out.println("===============================================\n");
 
 		try {
 			while(true) {
-				Thread.sleep(5000);		
 				String pictureName = "";
 	
 				List<String> queueList = sqs.listQueues().getQueueUrls();				
 				String myQueueUrl = queueList.get(0);
 				
-				// Receive messages.
 				System.out.println("Receiving messages from MyQueue.\n");
-				final ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest(myQueueUrl);
+				
+				final SetQueueAttributesRequest setQueueAttributesRequest = new SetQueueAttributesRequest()
+				        .withQueueUrl(myQueueUrl)
+				        .addAttributesEntry("ReceiveMessageWaitTimeSeconds", "20");
+				sqs.setQueueAttributes(setQueueAttributesRequest);
+				
+				ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest()
+				        .withQueueUrl(myQueueUrl)
+				        .withWaitTimeSeconds(20);				
+				
+				//final ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest(myQueueUrl);
 				final List<Message> messages = sqs.receiveMessage(receiveMessageRequest).getMessages();
 				for (final Message message : messages) {
 					System.out.println("Message");
@@ -122,8 +129,6 @@ public class SQSSimpleJavaClientExample {
 					+ "the client encountered a serious internal problem while "
 					+ "trying to communicate with Amazon SQS, such as not " + "being able to access the network.");
 			System.out.println("Error Message: " + ace.getMessage());
-		} catch (InterruptedException e) {
-			e.printStackTrace();
 		}
 	}
 	

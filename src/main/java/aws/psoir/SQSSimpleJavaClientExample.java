@@ -16,16 +16,16 @@ package aws.psoir;
  *
  */
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
 import com.amazonaws.services.sqs.model.*;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.AmazonClientException;
+import com.amazonaws.AmazonServiceException;
 import com.amazonaws.SdkClientException;
 
 import java.io.File;
@@ -36,6 +36,7 @@ import javax.imageio.ImageIO;
 import java.awt.geom.AffineTransform;
 import java.awt.image.AffineTransformOp;
 import java.awt.image.BufferedImage;
+import java.awt.image.Raster;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -55,7 +56,7 @@ import com.amazonaws.services.s3.model.S3Object;
 public class SQSSimpleJavaClientExample {
 	
 	private static BufferedImage picture;
-	private static BasicAWSCredentials creds = new BasicAWSCredentials("key", "security-key");
+	private static BasicAWSCredentials creds = new BasicAWSCredentials("key", "security_key");
 	
 	
 	public static void main(String[] args) {
@@ -145,28 +146,22 @@ public class SQSSimpleJavaClientExample {
                     .withRegion(clientRegion)
                     .withCredentials(new AWSStaticCredentialsProvider(creds))
                     .build();
-
-		/*	ByteArrayOutputStream os = new ByteArrayOutputStream();
-			ImageIO.write(picture, "jpeg", os);
-			InputStream is = new ByteArrayInputStream(os.toByteArray());
-
-			ObjectMetadata metadata = new ObjectMetadata();
-			PutObjectRequest request = new PutObjectRequest(bucketName, fileObjKeyName, is, metadata);*/
 			
-		//	File file = new File("picture.jpeg");
-			ImageIO.write(picture, "jpeg", file);
+    		BufferedImage newPicture = new BufferedImage(picture.getWidth(), picture.getHeight(), BufferedImage.TYPE_3BYTE_BGR);
+    		newPicture.setData(picture.getData());
+            
+			ImageIO.write(newPicture, "jpeg", file);
             PutObjectRequest request = new PutObjectRequest(bucketName, fileObjKeyName, file);			
             
             s3Client.putObject(request);
 			System.out.println("File was uploaded to S3");
-
         }
         catch(AmazonServiceException e) {
             e.printStackTrace();
         }
         catch(SdkClientException e) {
             e.printStackTrace();
-		} 
+		}
         catch (IOException e) {
 			e.printStackTrace();
 		} 
@@ -205,15 +200,15 @@ public class SQSSimpleJavaClientExample {
 	}
 	
 	private static BufferedImage getImage(InputStream input) throws IOException {
-		BufferedImage myPicture = ImageIO.read(input);
-		
+		BufferedImage newPicture = ImageIO.read(input);
+				
 		AffineTransform tx = new AffineTransform();
-		tx.rotate(0.5, myPicture.getWidth() / 2, myPicture.getHeight() / 2);
+		tx.rotate(0.5, newPicture.getWidth() / 2, newPicture.getHeight() / 2);
 
 		AffineTransformOp op = new AffineTransformOp(tx, AffineTransformOp.TYPE_BILINEAR);
-		myPicture = op.filter(myPicture, null);
+		newPicture = op.filter(newPicture, null);
 		
-		return myPicture;
+		return newPicture;
 	}
 
 }//https://175745531068.signin.aws.amazon.com/console-

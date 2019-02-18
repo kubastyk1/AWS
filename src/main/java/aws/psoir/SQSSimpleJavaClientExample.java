@@ -2,8 +2,6 @@ package aws.psoir;
 
 import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.AmazonClientException;
@@ -15,9 +13,6 @@ import java.io.IOException;
 import com.amazonaws.services.s3.model.S3Object;
 
 public class SQSSimpleJavaClientExample {
-	
-	private static BasicAWSCredentials creds = new BasicAWSCredentials("key", "security_key");
-	private static final String CLIENT_REGION = "eu-central-1";
 	
 	private static AmazonSQS sqs;
 	private static AmazonS3 s3Client;
@@ -68,13 +63,7 @@ public class SQSSimpleJavaClientExample {
 	}
 	
 	private static void init() {
-		sqs = AmazonSQSClientBuilder.standard()
-				.withRegion(CLIENT_REGION)
-				.withCredentials(new AWSStaticCredentialsProvider(creds))
-				.build();
-		s3Client = AmazonS3ClientBuilder.standard()
-                 .withRegion(CLIENT_REGION)
-                 .withCredentials(new AWSStaticCredentialsProvider(creds))
-                 .build();
+		sqs = AmazonSQSClientBuilder.standard().build();
+		s3Client = AmazonS3ClientBuilder.standard().build();
 	}
 }
